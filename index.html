@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>TalkDesk Report Centre</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TalkDesk RC">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#060608">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; background: #060608; overflow: hidden; font-family: 'DM Sans', -apple-system, sans-serif; color: #e4e4e7; }
+  iframe { width: 100%; height: 100%; border: none; background: #060608; }
+
+  #launch {
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; background: #060608;
+    z-index: 100; padding: 40px 24px;
+    padding-top: calc(40px + env(safe-area-inset-top));
+    padding-bottom: calc(40px + env(safe-area-inset-bottom));
+    cursor: default;
+  }
+  #launch.fading { animation: launchFadeOut 0.9s cubic-bezier(0.4,0,0.2,1) forwards; }
+  @keyframes launchFadeOut { 0% { opacity:1; transform:scale(1); } 100% { opacity:0; transform:scale(1.04); } }
+
+  #particles { position: absolute; inset: 0; pointer-events: none; }
+  #electricCanvas { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+
+  #iconWrap {
+    position: relative; z-index: 10; opacity: 0; transform: translateY(20px);
+    animation: iconIn 0.9s cubic-bezier(0.34,1.56,0.64,1) 0.3s forwards;
+    filter: drop-shadow(0 0 32px rgba(109,40,217,0.35)) drop-shadow(0 0 64px rgba(14,165,233,0.15));
+  }
+  @keyframes iconIn { to { opacity:1; transform:translateY(0); } }
+
+  .launch-title {
+    position: relative; z-index: 10; font-size: 28px; font-weight: 700;
+    letter-spacing: 1px; color: #fff; margin-top: 28px; opacity: 0;
+    animation: textFadeIn 1.2s ease 0.7s forwards;
+  }
+  .launch-subtitle {
+    position: relative; z-index: 10; font-size: 13px; color: #6b7280;
+    letter-spacing: 1.5px; text-transform: uppercase; margin-top: 6px;
+    opacity: 0; animation: textFadeIn 1.4s ease 1.0s forwards;
+  }
+  .ios-launch-btn {
+    display: none; position: relative; z-index: 10; margin-top: 32px;
+    padding: 14px 40px; background: #6d28d9; color: #fff;
+    border-radius: 10px; text-decoration: none; font-size: 16px;
+    font-weight: 600; font-family: 'DM Sans', sans-serif;
+    opacity: 0; animation: textFadeIn 1.6s ease 1.2s forwards;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 20px rgba(109,40,217,0.3);
+  }
+  .ios-launch-btn:active { filter: brightness(0.85); }
+  body.ios-mode .ios-launch-btn { display: inline-block; }
+  .launch-hint {
+    display: block; position: relative; z-index: 10; font-size: 11px;
+    color: #374151; margin-top: 40px; opacity: 0;
+    animation: textFadeIn 1.6s ease 1.6s forwards;
+  }
+  body.ios-mode .launch-hint { display: none; }
+  .ios-note {
+    display: none; position: relative; z-index: 10; font-size: 11px;
+    color: #33373f; margin-top: 12px; max-width: 260px; line-height: 1.5;
+    text-align: center; opacity: 0; animation: textFadeIn 1.8s ease 1.4s forwards;
+  }
+  body.ios-mode .ios-note { display: block; }
+
+  @keyframes textFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+  .accent-line {
+    position: relative; z-index: 10; width: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, #6d28d9, #0ea5e9, transparent);
+    margin-top: 16px; border-radius: 1px;
+    animation: lineExpand 1.2s cubic-bezier(0.4,0,0.2,1) 0.9s forwards;
+  }
+  @keyframes lineExpand { to { width: 160px; } }
+
+  .pulse-ring {
+    position: absolute; z-index: 1; width: 180px; height: 180px;
+    border-radius: 50%; border: 1px solid rgba(109,40,217,0.2);
+    animation: pulseRing 2.5s ease-out 1.2s infinite;
+  }
+  .pulse-ring:nth-child(2) { animation-delay: 1.8s; border-color: rgba(14,165,233,0.15); }
+  @keyframes pulseRing { 0% { transform:scale(0.8); opacity:0; } 20% { opacity:1; } 100% { transform:scale(2.2); opacity:0; } }
+
+  @supports (padding: env(safe-area-inset-top)) {
+    body {
+      padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="launch">
+  <canvas id="particles"></canvas>
+  <canvas id="electricCanvas"></canvas>
+  <div class="pulse-ring"></div>
+  <div class="pulse-ring"></div>
+  <div id="iconWrap">
+    <svg width="120" height="120" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="4" width="132" height="132" rx="30" fill="#0a0a0e" stroke="rgba(109,40,217,0.3)" stroke-width="2"/>
+      <!-- Headband arc -->
+      <path d="M38 65 Q40 28 70 25 Q100 28 102 65" fill="none" stroke="url(#bandGrad)" stroke-width="4.5" stroke-linecap="round"/>
+      <defs>
+        <linearGradient id="bandGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#6d28d9"/>
+          <stop offset="100%" stop-color="#0ea5e9"/>
+        </linearGradient>
+      </defs>
+      <!-- Left earpiece -->
+      <rect x="24" y="52" width="28" height="38" rx="8" fill="#6d28d9"/>
+      <rect x="28" y="56" width="20" height="30" rx="6" fill="#5b21b6"/>
+      <!-- Right earpiece -->
+      <rect x="88" y="52" width="28" height="38" rx="8" fill="#0ea5e9"/>
+      <rect x="92" y="56" width="20" height="30" rx="6" fill="#0284c7"/>
+      <!-- Mic boom -->
+      <line x1="36" y1="86" x2="52" y2="108" stroke="#6d28d9" stroke-width="3.5" stroke-linecap="round" opacity="0.8"/>
+      <circle cx="52" cy="108" r="5.5" fill="#0ea5e9"/>
+      <circle cx="52" cy="108" r="3.5" fill="#0284c7"/>
+      <!-- Be text -->
+      <text x="70" y="80" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="26" font-weight="700" fill="#ffffff">Be</text>
+    </svg>
+  </div>
+  <div class="launch-title">TalkDesk Report Centre</div>
+  <div class="accent-line"></div>
+  <div class="launch-subtitle">TalkDesk, 3CX, & RQ Data Explorer</div>
+  <a id="iosBtn" class="ios-launch-btn" href="#">Launch Report Centre</a>
+  <div class="ios-note">Opens in a browser view. Tap Done to return.</div>
+  <div class="launch-hint">Tap anywhere to launch</div>
+</div>
+
+<script>
+var GAS_URL = 'https://script.google.com/a/macros/bemobile.com/s/AKfycbyHjCRqrb3xULar5pJSJmlbm135_C1me4y4m-WBN72mPzcpX3bgCg27ebxpDJ3h1WfVfw/exec';
+
+function isIOS() {
+  return /iPhone|iPod|iPad/.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+/* ── PARTICLE ENGINE (ambient floating particles) ── */
+(function() {
+  var canvas = document.getElementById('particles');
+  var ctx = canvas.getContext('2d');
+  var W, H, particles = [], animId;
+  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+
+  var COLORS = [
+    { r: 109, g: 40,  b: 217 },
+    { r: 14,  g: 165, b: 233 },
+    { r: 99,  g: 102, b: 241 },
+    { r: 139, g: 92,  b: 246 },
+    { r: 56,  g: 189, b: 248 },
+  ];
+
+  function rnd(min, max) { return Math.random() * (max - min) + min; }
+
+  function spawnParticle() {
+    var col = COLORS[Math.floor(Math.random() * COLORS.length)];
+    var cx = W * 0.5 + rnd(-W * 0.35, W * 0.35);
+    return {
+      x: cx, y: H + rnd(0, 40), baseX: cx,
+      vx: rnd(-0.6, 0.6),
+      vy: rnd(-1.4, -2.8),
+      waveAmp: rnd(15, 45),
+      waveFreq: rnd(0.012, 0.028),
+      waveOffset: rnd(0, Math.PI * 2),
+      size: rnd(1.2, 3.5),
+      life: 1.0,
+      decay: rnd(0.004, 0.010),
+      r: col.r, g: col.g, b: col.b,
+      twinkle: rnd(0, Math.PI * 2),
+      twinkleSpeed: rnd(0.04, 0.12),
+      traveled: 0,
+    };
+  }
+
+  for (var i = 0; i < 60; i++) {
+    var p = spawnParticle(); p.y = rnd(0, H); p.life = rnd(0.2, 0.95); particles.push(p);
+  }
+
+  function step() {
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < 2; i++) {
+      if (particles.length < 140) particles.push(spawnParticle());
+    }
+    particles.forEach(function(p) {
+      p.traveled += Math.abs(p.vy);
+      p.x = p.baseX + Math.sin(p.traveled * p.waveFreq + p.waveOffset) * p.waveAmp;
+      p.baseX += p.vx * 0.3;
+      p.y += p.vy;
+      p.life -= p.decay;
+      p.twinkle += p.twinkleSpeed;
+      var alpha = Math.max(0, p.life) * (0.75 + Math.sin(p.twinkle) * 0.25);
+      var topFade = Math.min(1, p.y / (H * 0.15));
+      var fa = alpha * topFade;
+      if (fa <= 0) return;
+      var gr = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3.5);
+      gr.addColorStop(0,   'rgba(' + p.r + ',' + p.g + ',' + p.b + ',' + fa * 0.5 + ')');
+      gr.addColorStop(0.4, 'rgba(' + p.r + ',' + p.g + ',' + p.b + ',' + fa * 0.2 + ')');
+      gr.addColorStop(1,   'rgba(' + p.r + ',' + p.g + ',' + p.b + ',0)');
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = gr; ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 0.6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,' + fa * 0.9 + ')'; ctx.fill();
+      if (Math.abs(p.vy) > 2.0) {
+        var sl = Math.abs(p.vy) * 3;
+        var g2 = ctx.createLinearGradient(p.x, p.y, p.x, p.y + sl);
+        g2.addColorStop(0, 'rgba(' + p.r + ',' + p.g + ',' + p.b + ',' + fa * 0.6 + ')');
+        g2.addColorStop(1, 'rgba(' + p.r + ',' + p.g + ',' + p.b + ',0)');
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y + sl);
+        ctx.strokeStyle = g2; ctx.lineWidth = p.size * 0.5; ctx.stroke();
+      }
+    });
+    particles = particles.filter(function(p) { return p.life > 0 && p.y > -20; });
+    animId = requestAnimationFrame(step);
+  }
+  step();
+  window._stopParticles = function() {
+    cancelAnimationFrame(animId);
+    canvas.style.transition = 'opacity 0.8s ease';
+    canvas.style.opacity = '0';
+  };
+})();
+
+/* ── ELECTRIC BOLT EFFECT ON CLICK ── */
+(function() {
+  var canvas = document.getElementById('electricCanvas');
+  var ctx = canvas.getContext('2d');
+  var W, H;
+  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+
+  var bolts = [];
+  var sparks = [];
+
+  function rnd(a, b) { return Math.random() * (b - a) + a; }
+
+  function createBolt(x1, y1, x2, y2, depth) {
+    if (depth > 4) return [];
+    var segments = [];
+    var dx = x2 - x1;
+    var dy = y2 - y1;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 4) return [{ x1: x1, y1: y1, x2: x2, y2: y2, alpha: 1, width: Math.max(0.5, 3 - depth) }];
+
+    var midX = (x1 + x2) / 2 + rnd(-dist * 0.15, dist * 0.15);
+    var midY = (y1 + y2) / 2 + rnd(-dist * 0.15, dist * 0.15);
+
+    segments = segments.concat(createBolt(x1, y1, midX, midY, depth + 1));
+    segments = segments.concat(createBolt(midX, midY, x2, y2, depth + 1));
+
+    if (depth < 2 && Math.random() < 0.4) {
+      var branchX = midX + rnd(-dist * 0.3, dist * 0.3);
+      var branchY = midY + rnd(-dist * 0.3, dist * 0.3);
+      segments = segments.concat(createBolt(midX, midY, branchX, branchY, depth + 2));
+    }
+
+    return segments;
+  }
+
+  function spawnElectricBurst(cx, cy) {
+    var numBolts = 6 + Math.floor(Math.random() * 5);
+    for (var i = 0; i < numBolts; i++) {
+      var angle = rnd(0, Math.PI * 2);
+      var len = rnd(60, 180);
+      var ex = cx + Math.cos(angle) * len;
+      var ey = cy + Math.sin(angle) * len;
+      var segs = createBolt(cx, cy, ex, ey, 0);
+      var boltObj = { segments: segs, life: 1.0, decay: rnd(0.03, 0.06), flickerPhase: rnd(0, Math.PI * 2) };
+      bolts.push(boltObj);
+    }
+    for (var j = 0; j < 30; j++) {
+      var sa = rnd(0, Math.PI * 2);
+      var sv = rnd(2, 8);
+      sparks.push({
+        x: cx, y: cy,
+        vx: Math.cos(sa) * sv,
+        vy: Math.sin(sa) * sv,
+        life: 1.0,
+        decay: rnd(0.02, 0.05),
+        size: rnd(1, 3),
+        isPurple: Math.random() < 0.5
+      });
+    }
+  }
+
+  var running = false;
+  function loop() {
+    if (!running) return;
+    ctx.clearRect(0, 0, W, H);
+
+    bolts.forEach(function(b) {
+      b.life -= b.decay;
+      b.flickerPhase += 0.5;
+      var flicker = 0.6 + Math.sin(b.flickerPhase) * 0.4;
+      var alpha = Math.max(0, b.life) * flicker;
+      b.segments.forEach(function(seg) {
+        ctx.beginPath();
+        ctx.moveTo(seg.x1, seg.y1);
+        ctx.lineTo(seg.x2, seg.y2);
+        ctx.strokeStyle = 'rgba(180,160,255,' + alpha * 0.8 + ')';
+        ctx.lineWidth = seg.width + 1;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(seg.x1, seg.y1);
+        ctx.lineTo(seg.x2, seg.y2);
+        ctx.strokeStyle = 'rgba(255,255,255,' + alpha + ')';
+        ctx.lineWidth = seg.width * 0.5;
+        ctx.stroke();
+      });
+    });
+
+    sparks.forEach(function(sp) {
+      sp.x += sp.vx;
+      sp.y += sp.vy;
+      sp.vx *= 0.96;
+      sp.vy *= 0.96;
+      sp.life -= sp.decay;
+      var a = Math.max(0, sp.life);
+      var col = sp.isPurple ? '109,40,217' : '14,165,233';
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(' + col + ',' + a + ')';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, sp.size * 0.4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,' + a * 0.9 + ')';
+      ctx.fill();
+    });
+
+    bolts = bolts.filter(function(b) { return b.life > 0; });
+    sparks = sparks.filter(function(s) { return s.life > 0; });
+
+    if (bolts.length === 0 && sparks.length === 0) {
+      running = false;
+      return;
+    }
+    requestAnimationFrame(loop);
+  }
+
+  window._electricBurst = function(x, y) {
+    spawnElectricBurst(x, y);
+    if (!running) {
+      running = true;
+      loop();
+    }
+  };
+
+  window._stopElectric = function() {
+    running = false;
+    ctx.clearRect(0, 0, W, H);
+  };
+})();
+
+/* ── PLATFORM BRANCHING ── */
+(function() {
+  if (isIOS()) {
+    document.body.classList.add('ios-mode');
+    document.getElementById('iosBtn').href = GAS_URL;
+    document.getElementById('iosBtn').addEventListener('click', function(e) {
+      var rect = e.target.getBoundingClientRect();
+      window._electricBurst(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    });
+  } else {
+    var launch = document.getElementById('launch');
+    launch.style.cursor = 'pointer';
+    launch.addEventListener('click', function(e) {
+      if (launch.dataset.launched) return;
+      launch.dataset.launched = '1';
+      window._electricBurst(e.clientX, e.clientY);
+      setTimeout(function() {
+        window._stopParticles && window._stopParticles();
+        window._stopElectric && window._stopElectric();
+        launch.classList.add('fading');
+        setTimeout(function() {
+          launch.style.display = 'none';
+          var iframe = document.createElement('iframe');
+          iframe.src = GAS_URL;
+          iframe.allow = 'clipboard-write';
+          iframe.sandbox = 'allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox allow-modals';
+          iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:#060608;z-index:1;';
+          document.body.appendChild(iframe);
+        }, 850);
+      }, 400);
+    });
+  }
+})();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(function() {});
+}
+</script>
+</body>
+</html>
