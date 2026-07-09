@@ -16,7 +16,6 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; background: #060608; overflow: hidden; font-family: 'DM Sans', -apple-system, sans-serif; color: #e4e4e7; }
-  iframe { width: 100%; height: 100%; border: none; background: #060608; }
 
   #launch {
     position: fixed; inset: 0; display: flex; flex-direction: column;
@@ -24,9 +23,9 @@
     z-index: 100; padding: 40px 24px;
     padding-top: calc(40px + env(safe-area-inset-top));
     padding-bottom: calc(40px + env(safe-area-inset-bottom));
-    cursor: default;
+    cursor: pointer;
   }
-  #launch.fading { animation: launchFadeOut 0.9s cubic-bezier(0.4,0,0.2,1) forwards; }
+  #launch.fading { animation: launchFadeOut 0.6s cubic-bezier(0.4,0,0.2,1) forwards; }
   @keyframes launchFadeOut { 0% { opacity:1; transform:scale(1); } 100% { opacity:0; transform:scale(1.04); } }
 
   #particles { position: absolute; inset: 0; pointer-events: none; }
@@ -49,27 +48,25 @@
     letter-spacing: 1.5px; text-transform: uppercase; margin-top: 6px;
     opacity: 0; animation: textFadeIn 1.4s ease 1.0s forwards;
   }
-  .ios-launch-btn {
-    display: none; position: relative; z-index: 10; margin-top: 32px;
+  .launch-btn {
+    display: inline-block; position: relative; z-index: 10; margin-top: 32px;
     padding: 14px 40px; background: #6d28d9; color: #fff;
     border-radius: 10px; text-decoration: none; font-size: 16px;
     font-weight: 600; font-family: 'DM Sans', sans-serif;
-    opacity: 0; animation: textFadeIn 1.6s ease 1.2s forwards;
+    opacity: 0; animation: textFadeIn 1.4s ease 1.1s forwards;
     -webkit-tap-highlight-color: transparent;
     box-shadow: 0 0 20px rgba(109,40,217,0.3);
   }
-  .ios-launch-btn:active { filter: brightness(0.85); }
-  body.ios-mode .ios-launch-btn { display: inline-block; }
+  .launch-btn:active { filter: brightness(0.85); }
   .launch-hint {
-    display: block; position: relative; z-index: 10; font-size: 11px;
-    color: #374151; margin-top: 40px; opacity: 0;
-    animation: textFadeIn 1.6s ease 1.6s forwards;
+    position: relative; z-index: 10; font-size: 11px;
+    color: #374151; margin-top: 26px; opacity: 0;
+    animation: textFadeIn 1.6s ease 1.4s forwards;
   }
-  body.ios-mode .launch-hint { display: none; }
   .ios-note {
     display: none; position: relative; z-index: 10; font-size: 11px;
-    color: #33373f; margin-top: 12px; max-width: 260px; line-height: 1.5;
-    text-align: center; opacity: 0; animation: textFadeIn 1.8s ease 1.4s forwards;
+    color: #33373f; margin-top: 10px; max-width: 260px; line-height: 1.5;
+    text-align: center; opacity: 0; animation: textFadeIn 1.8s ease 1.5s forwards;
   }
   body.ios-mode .ios-note { display: block; }
 
@@ -134,9 +131,9 @@
   <div class="launch-title">TalkDesk Report Centre</div>
   <div class="accent-line"></div>
   <div class="launch-subtitle">TalkDesk, 3CX, & RQ Data Explorer</div>
-  <a id="iosBtn" class="ios-launch-btn" href="#">Launch Report Centre</a>
+  <a id="launchBtn" class="launch-btn" href="#">Launch Report Centre</a>
   <div class="ios-note">Opens in a browser view. Tap Done to return.</div>
-  <div class="launch-hint">Tap anywhere to launch</div>
+  <div class="launch-hint">Launching automatically&hellip; tap anywhere to go now</div>
 </div>
 
 <script>
@@ -229,12 +226,12 @@ function isIOS() {
   step();
   window._stopParticles = function() {
     cancelAnimationFrame(animId);
-    canvas.style.transition = 'opacity 0.8s ease';
+    canvas.style.transition = 'opacity 0.5s ease';
     canvas.style.opacity = '0';
   };
 })();
 
-/* ── ELECTRIC BOLT EFFECT ON CLICK ── */
+/* ── ELECTRIC BOLT EFFECT ── */
 (function() {
   var canvas = document.getElementById('electricCanvas');
   var ctx = canvas.getContext('2d');
@@ -279,8 +276,7 @@ function isIOS() {
       var ex = cx + Math.cos(angle) * len;
       var ey = cy + Math.sin(angle) * len;
       var segs = createBolt(cx, cy, ex, ey, 0);
-      var boltObj = { segments: segs, life: 1.0, decay: rnd(0.03, 0.06), flickerPhase: rnd(0, Math.PI * 2) };
-      bolts.push(boltObj);
+      bolts.push({ segments: segs, life: 1.0, decay: rnd(0.03, 0.06), flickerPhase: rnd(0, Math.PI * 2) });
     }
     for (var j = 0; j < 30; j++) {
       var sa = rnd(0, Math.PI * 2);
@@ -358,45 +354,51 @@ function isIOS() {
       loop();
     }
   };
-
-  window._stopElectric = function() {
-    running = false;
-    ctx.clearRect(0, 0, W, H);
-  };
 })();
 
-/* ── PLATFORM BRANCHING ── */
+/* ── LAUNCH: top-level redirect (no iframe) ──
+   Navigating the whole window makes script.google.com first party:
+   Google session cookies flow, the sign-in page can render when needed,
+   and X-Frame-Options never applies. The old iframe path died when
+   Chrome's third-party cookie blocking starved it of the session. */
 (function() {
-  if (isIOS()) {
-    document.body.classList.add('ios-mode');
-    document.getElementById('iosBtn').href = GAS_URL;
-    document.getElementById('iosBtn').addEventListener('click', function(e) {
-      var rect = e.target.getBoundingClientRect();
-      window._electricBurst(rect.left + rect.width / 2, rect.top + rect.height / 2);
-    });
-  } else {
-    var launch = document.getElementById('launch');
-    launch.style.cursor = 'pointer';
-    launch.addEventListener('click', function(e) {
-      if (launch.dataset.launched) return;
-      launch.dataset.launched = '1';
-      window._electricBurst(e.clientX, e.clientY);
-      setTimeout(function() {
-        window._stopParticles && window._stopParticles();
-        window._stopElectric && window._stopElectric();
-        launch.classList.add('fading');
-        setTimeout(function() {
-          launch.style.display = 'none';
-          var iframe = document.createElement('iframe');
-          iframe.src = GAS_URL;
-          iframe.allow = 'clipboard-write';
-          iframe.sandbox = 'allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox allow-modals';
-          iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:#060608;z-index:1;';
-          document.body.appendChild(iframe);
-        }, 850);
-      }, 400);
-    });
+  if (isIOS()) document.body.classList.add('ios-mode');
+
+  var launched = false;
+  var autoTimer = null;
+
+  function launchNow(x, y) {
+    if (launched) return;
+    launched = true;
+    if (autoTimer) clearTimeout(autoTimer);
+    if (typeof x === 'number') window._electricBurst(x, y);
+    setTimeout(function() {
+      window._stopParticles && window._stopParticles();
+      document.getElementById('launch').classList.add('fading');
+      setTimeout(function() { window.location.replace(GAS_URL); }, 450);
+    }, 350);
   }
+
+  // Manual button: real href as no-JS fallback, burst + redirect when JS runs
+  var btn = document.getElementById('launchBtn');
+  btn.setAttribute('href', GAS_URL);
+  btn.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var rect = btn.getBoundingClientRect();
+    launchNow(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  });
+
+  // Tap anywhere
+  document.getElementById('launch').addEventListener('click', function(e) {
+    launchNow(e.clientX, e.clientY);
+  });
+
+  // Auto-launch after the splash plays
+  autoTimer = setTimeout(function() {
+    var icon = document.getElementById('iconWrap').getBoundingClientRect();
+    launchNow(icon.left + icon.width / 2, icon.top + icon.height / 2);
+  }, 1600);
 })();
 
 if ('serviceWorker' in navigator) {
