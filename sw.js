@@ -1,34 +1,17 @@
-// TalkDesk Report Centre — Minimal Service Worker
-// Network-first. Never caches cross-origin requests.
-const CACHE = 'td-reports-v1';
-
+// TalkDesk Report Centre — pass-through service worker
+// Exists only to satisfy PWA installability. NO caching: every launc
+//liv e wrapper on the next relaunch with zero cache versioning ceremony..
 self.addEventListener('install', function(e) {
   self.skipWaiting();
 });
-
 self.addEventListener('activate', function(e) {
   e.waitUntil(
     caches.keys().then(function(keys) {
-      return Promise.all(
-        keys.filter(function(k) { return k !== CACHE; })
-            .map(function(k) { return caches.delete(k); })
-      );
-    })
+      // Purge everything the old caching worker (td-reports-v1) left behind
+      return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+    }).then(function() { return self.clients.claim(); })
   );
-  self.clients.claim();
 });
-
 self.addEventListener('fetch', function(e) {
-  if (!e.request.url.startsWith(self.location.origin)) return;
-  e.respondWith(
-    fetch(e.request).then(function(res) {
-      var clone = res.clone();
-      caches.open(CACHE).then(function(cache) {
-        cache.put(e.request, clone);
-      });
-      return res;
-    }).catch(function() {
-      return caches.match(e.request);
-    })
-  );
+  e.respondWith(fetch(e.request));
 });
